@@ -1,8 +1,11 @@
 const sql = require('mssql');
 const { DefaultAzureCredential } = require('@azure/identity');
 
-const DB_SERVER = 'acdc-portal-db.database.windows.net';
-const DB_NAME = 'acdc-portal-db';
+// Environment-specific values keep local and test work isolated from production.
+// The fallbacks preserve the existing production configuration until its app
+// settings have been moved to SQL_SERVER and SQL_DATABASE.
+const DB_SERVER = process.env.SQL_SERVER || 'acdc-portal-db.database.windows.net';
+const DB_NAME = process.env.SQL_DATABASE || 'acdc-portal-db';
 
 let _pool = null;
 let _tokenExpiresAt = 0;
@@ -16,6 +19,15 @@ async function getPool() {
     if (_pool) {
         try { await _pool.close(); } catch (e) { }
         _pool = null;
+    }
+
+    const connectionString = process.env.SQL_CONNECTION_STRING;
+    if (connectionString) {
+        // Used only for local development. Keep this value in local.settings.json,
+        // never in source control or a Static Web App setting.
+        _pool = await sql.connect(connectionString);
+        _tokenExpiresAt = Date.now() + (55 * 60 * 1000);
+        return _pool;
     }
 
     const credential = new DefaultAzureCredential();
@@ -45,4 +57,4 @@ async function closePool() {
     }
 }
 
-module.exports = { getPool, closePool, sql };
+module.exports = { getPool, closePool, sql, DB_SERVER, DB_NAME };

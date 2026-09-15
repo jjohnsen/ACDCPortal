@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "ACDC_ENV": "local",
+    "SQL_CONNECTION_STRING": "Server=localhost,14333;Database=acdcportal;User Id=sa;Password=ChangeMe_LocalOnly_123;Encrypt=false;TrustServerCertificate=true",
+    "JWT_SECRET": "replace-with-a-random-local-secret-of-at-least-32-characters",
+    "MAIL_TRANSPORT": "console",
+    "PORTAL_URL": "http://localhost:4280",
+    "SCHEDULER_SECRET": "replace-with-a-local-scheduler-secret"
+  }
+}

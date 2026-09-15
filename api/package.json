@@ -5,6 +5,7 @@
   "main": "src/functions/*.js",
   "scripts": {
     "start": "func start",
+    "start:local": "npx --yes azure-functions-core-tools@4 start",
     "test": "echo \"No tests yet\""
   },
   "engines": {

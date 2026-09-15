@@ -2,6 +2,11 @@ const { ConfidentialClientApplication } = require('@azure/msal-node');
 
 let msalClient = null;
 
+function isLocalDevelopment() {
+    return process.env.ACDC_ENV === 'local'
+        || process.env.AZURE_FUNCTIONS_ENVIRONMENT === 'Development';
+}
+
 function getMsalClient() {
     if (!msalClient && process.env.MAIL_CLIENT_ID) {
         msalClient = new ConfidentialClientApplication({
@@ -66,6 +71,15 @@ function extractInlineImages(html) {
 }
 
 async function sendEmail({ to, subject, htmlContent, textContent }) {
+    if (process.env.MAIL_TRANSPORT === 'console') {
+        if (!isLocalDevelopment()) {
+            throw new Error('MAIL_TRANSPORT=console is allowed only in local development');
+        }
+        const recipients = Array.isArray(to) ? to : [to];
+        console.log(`[local-mail] To: ${recipients.join(', ')} | Subject: ${subject}`);
+        return { success: true, recipients: recipients.length, transport: 'console' };
+    }
+
     const accessToken = await getAccessToken();
 
     const recipients = Array.isArray(to) ? to : [to];
@@ -131,14 +145,10 @@ async function sendBulkEmail({ to, subject, htmlContent }) {
 function processTemplate(template, data = {}) {
     let result = template;
 
-    console.log('[processTemplate] ===== MERGE DATA =====');
-    for (const [key, value] of Object.entries(data)) {
-        const display = typeof value === 'string' && value.length > 80 ? value.substring(0, 80) + '...' : value;
-        console.log(`[processTemplate]   ${key} = "${display}"`);
+    if (isLocalDevelopment()) {
+        const placeholders = template.match(/{{(\w+)}}/g) || [];
+        console.log(`[processTemplate] placeholders: ${placeholders.join(', ')}`);
     }
-
-    const placeholders = template.match(/{{(\w+)}}/g) || [];
-    console.log(`[processTemplate] Placeholders in template: ${placeholders.join(', ')}`);
 
     result = result.replace(/{{#if (\w+)}}([\s\S]*?){{\/if}}/g, (match, key, content) => {
         return data[key] ? content : '';
@@ -146,9 +156,6 @@ function processTemplate(template, data = {}) {
 
     result = result.replace(/{{(\w+)}}/g, (match, key) => {
         const val = data[key] !== undefined && data[key] !== null ? String(data[key]) : '';
-        if (key === 'acceptUrl' || key === 'inviteId') {
-            console.log(`[processTemplate] REPLACING {{${key}}} => "${val}"`);
-        }
         return val;
     });
 

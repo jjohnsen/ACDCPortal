@@ -165,7 +165,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             let captchaToken = '';
-            if (typeof grecaptcha !== 'undefined' && RECAPTCHA_SITE_KEY !== 'RECAPTCHA_SITE_KEY') {
+            const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+            if (isLocalHost) {
+                // The API accepts this only when its local settings omit the
+                // reCAPTCHA secret. It keeps the full registration flow usable
+                // without a Google test key.
+                captchaToken = 'local-development';
+            } else if (typeof grecaptcha !== 'undefined' && RECAPTCHA_SITE_KEY !== 'RECAPTCHA_SITE_KEY') {
                 captchaToken = await grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'register' });
             }
 
@@ -566,4 +572,3 @@ function showError(elementId, message) {
         errorDiv.classList.remove('hidden');
     }
 }
-
