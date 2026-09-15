@@ -4,6 +4,11 @@
   "description": "ACDC Team Registration Portal",
   "scripts": {
     "build": "echo 'No build step required - static files'",
+    "dev:api": "npm --prefix api run start:local",
+    "dev:web": "npx --yes @azure/static-web-apps-cli@2 start src --api-location http://localhost:7071",
+    "dev:check": "node scripts/verify-local-stack.js",
+    "db:init": "node scripts/run-create-tables.js",
+    "db:reset": "node scripts/reset-test-data.js",
     "test": "node tests/api-auth-posture.test.js && node tests/data-access-policy.test.js && node tests/team-delete-cascade.test.js && node tests/profile-verification-persistence.test.js && node tests/auth-config.test.js && node tests/auth-session.test.js && node tests/server-auth-transport.test.js && node tests/event-badges-policy.test.js && node tests/participant-interest-access.test.js && node tests/pending-team-contact-policy.test.js && node tests/stale-team-contact-cleanup.test.js && node tests/registration-completion-auth.test.js && node tests/team-registration-redirect.test.js && node tests/otp-rate-limit-separation.test.js && node tests/participant-commitment-capacity.test.js"
   },
   "keywords": ["azure", "static-web-apps", "entra", "otp"],

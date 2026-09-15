@@ -1,6 +1,9 @@
-const sql = require('../api/node_modules/mssql');
-const { DefaultAzureCredential } = require('../api/node_modules/@azure/identity');
 const readline = require('readline');
+const { loadLocalSettings } = require('./load-local-settings');
+
+loadLocalSettings();
+
+const { getPool, closePool, DB_SERVER, DB_NAME } = require('../api/src/shared/sql');
 
 const TABLES_TO_CLEAR = [
     { name: 'ScheduledRunCampaigns', note: 'child of ScheduledRuns' },
@@ -15,6 +18,15 @@ const TABLES_TO_CLEAR = [
     { name: 'SoloQueue',             note: '' },
 ];
 
+function assertSafeTarget() {
+    if (!['local', 'test'].includes(process.env.ACDC_ENV)) {
+        throw new Error('Set ACDC_ENV to local or test before resetting data. Production is blocked by this script.');
+    }
+    if (process.env.ACDC_ENV === 'local' && !process.env.SQL_CONNECTION_STRING) {
+        throw new Error('Local reset requires SQL_CONNECTION_STRING.');
+    }
+}
+
 async function confirm(question) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     return new Promise(resolve => {
@@ -26,6 +38,7 @@ async function confirm(question) {
 }
 
 async function run() {
+    assertSafeTarget();
     console.log('\n=== ACDC Portal: Transactional Data Reset ===\n');
     console.log('This will DELETE all rows from:');
     TABLES_TO_CLEAR.forEach(t => console.log(`  - ${t.name}${t.note ? ' (' + t.note + ')' : ''}`));
@@ -38,25 +51,9 @@ async function run() {
         process.exit(0);
     }
 
-    console.log('\nGetting Azure AD token...');
-    const credential = new DefaultAzureCredential();
-    const tokenResponse = await credential.getToken('https://database.windows.net/.default');
-
-    console.log('Connecting to Azure SQL (may take ~60s if auto-paused)...');
-    const pool = await sql.connect({
-        server: 'acdc-portal-db.database.windows.net',
-        database: 'acdc-portal-db',
-        options: {
-            encrypt: true,
-            trustServerCertificate: false
-        },
-        authentication: {
-            type: 'azure-active-directory-access-token',
-            options: { token: tokenResponse.token }
-        },
-        connectionTimeout: 120000,
-        requestTimeout: 120000
-    });
+    const target = process.env.SQL_CONNECTION_STRING ? 'SQL_CONNECTION_STRING' : `${DB_SERVER}/${DB_NAME}`;
+    console.log(`\nConnecting to ${target}...`);
+    const pool = await getPool();
     console.log('Connected!\n');
 
     try {
@@ -84,7 +81,7 @@ async function run() {
         console.error('\nERROR:', err.message);
         process.exit(1);
     } finally {
-        await pool.close();
+        await closePool();
     }
 }
 

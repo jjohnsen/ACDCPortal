@@ -1,5 +1,10 @@
 const crypto = require('crypto');
 
+function isLocalDevelopment() {
+    return process.env.ACDC_ENV === 'local'
+        || process.env.AZURE_FUNCTIONS_ENVIRONMENT === 'Development';
+}
+
 const Email = {
     generateCode() {
         return crypto.randomInt(100000, 999999).toString();
@@ -22,10 +27,11 @@ const Email = {
     },
 
     async sendVerificationCode(email, code) {
-        console.log('========================================');
-        console.log(`📧 VERIFICATION EMAIL TO: ${email}`);
-        console.log(`🔐 CODE: ${code}`);
-        console.log('========================================');
+        // OTPs must never reach shared production logs. Console transport is
+        // deliberately restricted to local development for an easy test flow.
+        if (process.env.MAIL_TRANSPORT === 'console' && isLocalDevelopment()) {
+            console.log(`[local-mail] Verification code for ${email}: ${code}`);
+        }
 
         try {
             const { sendEmail } = require('./mail');
@@ -59,7 +65,7 @@ const Email = {
                 htmlContent: htmlContent
             });
 
-            console.log(`✅ Verification email sent to ${email}`);
+            console.log('Verification email sent');
             return true;
         } catch (mailError) {
             console.error('❌ Failed to send verification email via mail system:', mailError.message);
